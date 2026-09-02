@@ -15,7 +15,7 @@ export interface OceanState {
   depth: number;
   time: string;
   region: 'North Indian Ocean' | 'Arabian Sea' | 'Bay of Bengal' | 'Andaman Sea' | 'Lakshadweep Sea';
-  displayMode: '3dglobe' | 'depthcurtain' | 'isosurface' | 'volume';
+  displayMode: '3dglobe' | 'depthcurtain' | 'isosurface' | 'volume' | 'live' | 'profile' | 'currents' | 'argo' | 'ai' | 'validation' | 'sources' | 'analytics' | 'settings' | string;
   palette: 'thermal' | 'viridis' | 'plasma' | 'blues';
   colorMin: number;
   colorMax: number;
