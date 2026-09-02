@@ -1,2 +1,21 @@
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { background: #05080f; overflow: hidden; font-family: 'Courier New', monospace; color: #c0d0e0; }
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+body {
+  background: #05080f;
+  overflow: hidden;
+  font-family: 'Courier New', monospace;
+  color: #c0d0e0;
+}
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #1a3a5a;
+  border-radius: 10px;
+}
