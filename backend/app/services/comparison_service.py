@@ -1,56 +1,76 @@
+"""
+Comparison Service
+==================
+Computes model-vs-observation statistics for a given Argo profile and
+the corresponding model (NetCDF) profile.
+
+Metrics returned
+----------------
+- RMSE  : root-mean-square error
+- Bias  : mean(model - obs)
+- r     : Pearson correlation coefficient
+- MAE   : mean absolute error
+- n     : number of matched depth levels
+"""
+
 import numpy as np
-from scipy.interpolate import interp1d
-import random
+from scipy.stats import pearsonr
+from app.services.interpolation_service import interpolate_profile_to_depths
 
-# Mock Argo Data (Simulates real profiles)
-ARGO_DB = {
-    "ARGO-1": {
-        "lat": 15.0, "lon": 85.0,
-        "depths": [0, 10, 25, 50, 100, 200, 500],
-        "temp": [29.5, 29.2, 28.5, 27.0, 24.5, 20.0, 15.0],
-        "salt": [36.8, 36.5, 36.0, 35.5, 34.8, 34.2, 34.0]
-    },
-    "ARGO-2": {
-        "lat": 12.0, "lon": 82.0,
-        "depths": [0, 10, 25, 50, 100, 200, 500],
-        "temp": [28.8, 28.5, 27.8, 26.5, 24.0, 19.5, 14.0],
-        "salt": [35.6, 35.4, 35.0, 34.7, 34.2, 33.8, 33.5]
-    },
-    "ARGO-3": None,  # Simulates failure
-    "ARGO-4": {
-        "lat": 22.0, "lon": 85.0,
-        "depths": [0, 10, 25, 50, 100, 200, 500],
-        "temp": [30.2, 30.0, 29.5, 28.0, 25.5, 21.0, 16.0],
-        "salt": [37.2, 37.0, 36.5, 36.0, 35.2, 34.5, 34.0]
+
+def compare_model_argo(
+    float_profile: dict,
+    model_profile: dict,
+    float_id: str,
+    variable: str,
+) -> dict:
+    """
+    Compare a single Argo float profile against a model profile.
+
+    Parameters
+    ----------
+    float_profile : dict  – {depths, temperatures, salinities}
+    model_profile : dict  – {depths, temperatures, salinities}
+    float_id      : str   – used only for logging
+    variable      : str   – 'temperature' or 'salinity'
+
+    Returns
+    -------
+    dict with keys: rmse, bias, correlation, mae, matchedPoints
+    """
+    key = "temperatures" if variable == "temperature" else "salinities"
+
+    obs_depths  = np.array(float_profile["depths"],  dtype=float)
+    obs_vals    = np.array(float_profile[key],        dtype=float)
+    mod_depths  = np.array(model_profile["depths"],   dtype=float)
+    mod_vals    = np.array(model_profile[key],         dtype=float)
+
+    # Interpolate model onto Argo depth levels (no extrapolation → NaN)
+    mod_interp = interpolate_profile_to_depths(mod_depths, mod_vals, obs_depths)
+
+    # Mask where either is NaN
+    mask = ~(np.isnan(obs_vals) | np.isnan(mod_interp))
+    n    = int(np.sum(mask))
+
+    if n < 2:
+        return {
+            "rmse": None, "bias": None, "correlation": None,
+            "mae": None,  "matchedPoints": n,
+        }
+
+    obs_clean = obs_vals[mask]
+    mod_clean = mod_interp[mask]
+    diff      = mod_clean - obs_clean
+
+    rmse = float(np.sqrt(np.mean(diff ** 2)))
+    bias = float(np.mean(diff))
+    mae  = float(np.mean(np.abs(diff)))
+    corr = float(pearsonr(mod_clean, obs_clean)[0]) if n >= 3 else None
+
+    return {
+        "rmse":         round(rmse, 4),
+        "bias":         round(bias, 4),
+        "correlation":  round(corr, 4) if corr is not None else None,
+        "mae":          round(mae,  4),
+        "matchedPoints": n,
     }
-}
-
-def compare_model_argo(float_id: str, variable: str, time: str):
-    if float_id == "ARGO-3":
-        raise ConnectionError("Comparison failed—check API connection.")
-    
-    argo_data = ARGO_DB.get(float_id)
-    if not argo_data:
-        raise ValueError("Float not found")
-    
-    obs_depths = np.array(argo_data["depths"])
-    obs_vals = np.array(argo_data["salt" if variable == "salinity" else "temp"])
-    
-    # Simulate Model interpolation (add slight bias/error)
-    model_vals = obs_vals + np.random.normal(0, 0.3, size=len(obs_vals))
-    model_vals = np.clip(model_vals, obs_vals - 1.5, obs_vals + 1.5)
-    
-    # Calculate metrics
-    mask = ~np.isnan(obs_vals) & ~np.isnan(model_vals)
-    if np.sum(mask) < 2:
-        return None, None, None
-    
-    rmse = np.sqrt(np.mean((model_vals[mask] - obs_vals[mask]) ** 2))
-    bias = np.mean(model_vals[mask] - obs_vals[mask])
-    
-    # Murphy Skill Score
-    climatology_rmse = np.std(obs_vals[mask]) if np.std(obs_vals[mask]) > 0 else 0.5
-    skill_score = 1 - (rmse / climatology_rmse)
-    skill_score = max(-1, min(1, skill_score))
-    
-    return float(rmse), float(bias), float(skill_score)

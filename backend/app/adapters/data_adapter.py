@@ -25,7 +25,7 @@ class OceanDataAdapter:
 
     def _create_synthetic_dataset(self):
         # --- SYNTHETIC FALLBACK (Works 100% offline) ---
-        print("⚠️ Generating synthetic dataset (NetCDF not found or fallback)")
+        print("[WARN] Generating synthetic dataset (NetCDF not found or fallback)")
         lon = np.linspace(50, 100, 60)
         lat = np.linspace(-10, 30, 50)
         time = pd.date_range('2026-08-28', periods=3)

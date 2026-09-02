@@ -1,9 +1,22 @@
+import sys
+
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import router
 from app.core.config import settings
 
-app = FastAPI(title=settings.PROJECT_NAME)
+app = FastAPI(
+    title=settings.PROJECT_NAME,
+    version="1.0.0",
+    description="OCEAN-X: 3-D Indian Ocean Visualization Backend",
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -13,9 +26,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(router, prefix="/api/v1")
+# Register routes under /api/v1, /api, and root for seamless compatibility
+app.include_router(router, prefix=settings.API_V1_STR)
+app.include_router(router, prefix="/api")
 app.include_router(router, prefix="")
 
-@app.get("/")
+
+@app.get("/", tags=["Health"])
 def root():
-    return {"message": "🌊 OCEAN-X API is running", "status": "online"}
+    return {
+        "message": "🌊 OCEAN-X Backend is live",
+        "status": "online",
+        "docs": "/docs",
+        "api": settings.API_V1_STR,
+    }
