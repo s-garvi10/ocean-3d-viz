@@ -130,11 +130,6 @@ ocean/
 
 ---
 
-## 🎤 3-Minute Pitch (SIH)
-
-> "India manages a vast EEZ, but oceanographers are drowning in data.  
-> OCEAN-X transforms complex arrays into an intuitive 3D workstation.  
-> We empower forecasters to make faster decisions and help the public understand our oceans."
 
 ---
 
