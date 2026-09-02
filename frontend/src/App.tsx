@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+﻿import React, { useEffect, useRef, useState } from 'react';
 import { useOceanStore } from './store/oceanStore';
 import { EarthScene } from './components/3D/EarthScene';
 import { Sidebar } from './components/Layout/Sidebar';
@@ -12,7 +12,8 @@ import { fetchSlice, fetchArgoFloats } from './api/oceanApi';
 function App() {
   const {
     variable, depth, time, region, setGridData, setArgoFloats,
-    setLoading, setError, isLoading, error, isPlaying, setTime
+    setLoading, setError, isLoading, error, isPlaying, setTime,
+    displayMode, setDisplayMode
   } = useOceanStore();
 
   const [isLearnOpen, setIsLearnOpen] = useState(false);
@@ -80,7 +81,7 @@ function App() {
       gridTemplateRows: '1fr 80px',
       gridTemplateAreas: '"sidebar main rightpanel" "sidebar bottom bottom"'
     }}>
-      <Sidebar onOpenLearn={() => setIsLearnOpen(true)} />
+      <Sidebar />
       <div style={{ gridArea: 'main', position: 'relative' }}>
         <EarthScene />
         <MetricsCards />
@@ -129,7 +130,7 @@ function App() {
             fontSize: 11,
             fontFamily: 'monospace'
           }}>
-            ? LOADING OCEAN DATA...
+            ⏳ LOADING OCEAN DATA...
           </div>
         )}
         {error && (
@@ -147,14 +148,20 @@ function App() {
             fontSize: 11,
             fontFamily: 'monospace'
           }}>
-            ?? {error}
+            ⚠️ {error}
           </div>
         )}
       </div>
       <ValidationPanel />
       <BottomBar />
 
-      <LearnModal isOpen={isLearnOpen} onClose={() => setIsLearnOpen(false)} />
+      <LearnModal
+        isOpen={displayMode === 'outreach' || isLearnOpen}
+        onClose={() => {
+          setIsLearnOpen(false);
+          setDisplayMode('3dglobe');
+        }}
+      />
     </div>
   );
 }
