@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useEffect } from 'react';
+import React, { useMemo, useRef, useEffect, useState } from 'react';
 import { Canvas, useFrame, useThree, useLoader } from '@react-three/fiber';
 import { OrbitControls, Sphere, Html } from '@react-three/drei';
 import * as THREE from 'three';
@@ -48,7 +48,7 @@ const Stars = () => {
   );
 };
 
-// --- Inner Scene Component (needs useThree/useFrame) ---
+// --- Inner Scene Component (rendered inside Canvas context) ---
 const SceneContent = () => {
   const {
     gridData, lats, lons, variable, depth, colorMin, colorMax, palette,
@@ -57,8 +57,9 @@ const SceneContent = () => {
   } = useOceanStore();
 
   const { camera } = useThree();
+  const controlsRef = useRef<any>(null);
   const targetRef = useRef<THREE.Vector3>(new THREE.Vector3(0, 0, 0));
-  const hasTarget = useRef(false);
+  const [isFlying, setIsFlying] = useState(false);
 
   // --- Load Earth textures ---
   const [earthMap, earthSpecular, cloudsMap] = useLoader(THREE.TextureLoader, [
@@ -117,7 +118,11 @@ const SceneContent = () => {
 
   // --- Fly to Argo ---
   useEffect(() => {
-    if (!selectedArgoId) return;
+    if (!selectedArgoId) {
+      setIsFlying(false);
+      targetRef.current.set(0, 0, 0);
+      return;
+    }
     const float = argoFloats.find((f: any) => f.id === selectedArgoId);
     if (!float) return;
     const phi = (90 - float.lat) * Math.PI / 180;
@@ -128,14 +133,19 @@ const SceneContent = () => {
       2.8 * Math.sin(phi) * Math.sin(theta)
     );
     targetRef.current.copy(pos);
-    hasTarget.current = true;
+    setIsFlying(true);
   }, [selectedArgoId, argoFloats]);
 
   // --- Animation Loop ---
   useFrame(() => {
-    if (hasTarget.current) {
-      camera.position.lerp(targetRef.current, 0.025);
-      camera.lookAt(0, 0, 0);
+    if (isFlying && targetRef.current.length() > 0) {
+      const dist = camera.position.distanceTo(targetRef.current);
+      if (dist < 0.05) {
+        setIsFlying(false);
+      } else {
+        camera.position.lerp(targetRef.current, 0.03);
+        camera.lookAt(0, 0, 0);
+      }
     }
     if (isPlaying) {
       const newDepth = Math.sin(Date.now() / 2000) * 100 + 225;
@@ -149,7 +159,16 @@ const SceneContent = () => {
       <ambientLight intensity={0.5} />
       <directionalLight position={[5, 5, 5]} intensity={1.5} />
       <directionalLight position={[-5, -2, -5]} intensity={0.3} />
-      <OrbitControls enableDamping dampingFactor={0.05} minDistance={2.5} maxDistance={12} />
+      <OrbitControls
+        ref={controlsRef}
+        enableDamping
+        dampingFactor={0.05}
+        minDistance={2.5}
+        maxDistance={12}
+        onStart={() => {
+          if (isFlying) setIsFlying(false);
+        }}
+      />
 
       {/* Earth */}
       <mesh geometry={earthGeometry}>
@@ -251,3 +270,4 @@ export const EarthScene = () => {
     </div>
   );
 };
+
