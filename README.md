@@ -1,7 +1,7 @@
 # 🌊 OCEAN-X — Ocean Intelligence Platform
 
-**NASA-grade 3D ocean data visualization and analytics platform**  
-Built for Smart India Hackathon 2026 | Indian Ocean Focus | INCOIS-ready
+ ocean data visualization and analytics platform**  
+
 
 ---
 
