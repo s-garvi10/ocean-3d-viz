@@ -107,10 +107,17 @@ const SceneContent = () => {
     const radius = 2.0;
     const scale = 0.03 * exaggeration;
 
+    const latitudeValues = lats.length === rows
+      ? lats
+      : Array.from({ length: rows }, (_, index) => -10 + (index / Math.max(rows - 1, 1)) * 40);
+    const longitudeValues = lons.length === cols
+      ? lons
+      : Array.from({ length: cols }, (_, index) => 50 + (index / Math.max(cols - 1, 1)) * 50);
+
     for (let j = 0; j < rows; j++) {
       for (let i = 0; i < cols; i++) {
-        const lat = -10 + (j / rows) * 40;
-        const lon = 50 + (i / cols) * 50;
+        const lat = latitudeValues[j];
+        const lon = longitudeValues[i];
         const phi = (90 - lat) * Math.PI / 180;
         const theta = lon * Math.PI / 180;
         const val = gridData[j]?.[i] ?? 20;
@@ -216,7 +223,7 @@ const SceneContent = () => {
       </Sphere>
 
       {/* Depth Curtain */}
-      {curtainGeometry && (displayMode === 'depthcurtain' || displayMode === 'live') && (
+      {curtainGeometry && (displayMode === 'depthcurtain' || displayMode === 'live' || displayMode === '3dglobe') && (
         <mesh geometry={curtainGeometry}>
           <meshPhongMaterial
             vertexColors

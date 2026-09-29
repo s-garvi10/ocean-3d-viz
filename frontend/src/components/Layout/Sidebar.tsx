@@ -60,7 +60,7 @@ export const Sidebar = () => {
         break;
       case 'globe':
         setDisplayMode('3dglobe');
-        if (showModel) toggleLayer('showModel');
+        if (!showModel) toggleLayer('showModel');
         break;
       case 'curtain':
         setDisplayMode('depthcurtain');
