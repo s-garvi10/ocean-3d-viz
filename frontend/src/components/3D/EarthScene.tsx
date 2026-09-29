@@ -52,9 +52,34 @@ const Stars = () => {
 const SceneContent = () => {
   const {
     gridData, lats, lons, variable, depth, colorMin, colorMax, palette,
-    exaggeration, displayMode, showModel, showArgo, showCurrents,
-    showThermocline, showGrid, selectedArgoId, argoFloats, isPlaying, setDepth,
+    exaggeration, opacity, displayMode, showModel, showArgo, showCurrents,
+    showThermocline, showGrid, selectedArgoId, hoveredArgoId, argoFloats, isPlaying, setDepth,
   } = useOceanStore();
+
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    };
+  }, []);
+
+  const handlePointerOver = (id: string) => {
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = null;
+    }
+    useOceanStore.getState().setHoveredArgo(id);
+    document.body.style.cursor = 'pointer';
+  };
+
+  const handlePointerOut = () => {
+    document.body.style.cursor = 'auto';
+    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    hoverTimerRef.current = setTimeout(() => {
+      useOceanStore.getState().setHoveredArgo(null);
+    }, 400);
+  };
 
   const { camera } = useThree();
   const controlsRef = useRef<any>(null);
@@ -191,12 +216,12 @@ const SceneContent = () => {
       </Sphere>
 
       {/* Depth Curtain */}
-      {curtainGeometry && displayMode === 'depthcurtain' && (
+      {curtainGeometry && (displayMode === 'depthcurtain' || displayMode === 'live') && (
         <mesh geometry={curtainGeometry}>
           <meshPhongMaterial
             vertexColors
             transparent
-            opacity={0.85}
+            opacity={opacity}
             side={THREE.DoubleSide}
             shininess={40}
             emissive={new THREE.Color(0x112233)}
@@ -217,29 +242,72 @@ const SceneContent = () => {
             r * Math.sin(phi) * Math.sin(theta)
           ];
           const isSelected = selectedArgoId === f.id;
+          const isHovered = hoveredArgoId === f.id;
+          const isHighlighted = isSelected || isHovered;
+
           return (
-            <group key={f.id} position={pos} onClick={() => useOceanStore.getState().selectArgo(f.id)}>
+            <group
+              key={f.id}
+              position={pos}
+              onPointerOver={(e) => {
+                e.stopPropagation();
+                handlePointerOver(f.id);
+              }}
+              onPointerOut={(e) => {
+                e.stopPropagation();
+                handlePointerOut();
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                useOceanStore.getState().selectArgo(isSelected ? null : f.id);
+              }}
+            >
+              {/* Invisible larger hover hit target */}
               <mesh>
-                <sphereGeometry args={[0.06, 16, 16]} />
-                <meshBasicMaterial color={isSelected ? '#ffaa00' : '#00ddff'} />
+                <sphereGeometry args={[0.22, 16, 16]} />
+                <meshBasicMaterial transparent opacity={0} depthWrite={false} />
               </mesh>
-              {isSelected && (
+
+              {/* Core float sphere */}
+              <mesh>
+                <sphereGeometry args={[isHighlighted ? 0.085 : 0.06, 16, 16]} />
+                <meshBasicMaterial color={isHighlighted ? '#ffaa00' : '#00ddff'} />
+              </mesh>
+
+              {/* Glowing aura when hovered or selected */}
+              {isHighlighted && (
                 <mesh>
-                  <sphereGeometry args={[0.12, 16, 16]} />
-                  <meshBasicMaterial color="#ffaa00" transparent opacity={0.3} />
+                  <sphereGeometry args={[0.15, 16, 16]} />
+                  <meshBasicMaterial color="#ffaa00" transparent opacity={0.35} />
                 </mesh>
               )}
-              <Html position={[0, 0.15, 0]} center>
-                <div style={{
-                  color: isSelected ? '#ffaa00' : '#88ddff',
-                  fontSize: 9,
-                  fontFamily: 'monospace',
-                  background: 'rgba(0,0,0,0.7)',
-                  padding: '2px 6px',
-                  borderRadius: 4,
-                  border: isSelected ? '1px solid #ffaa00' : 'none',
-                  pointerEvents: 'none'
-                }}>
+
+              {/* Float ID Label */}
+              <Html position={[0, 0.18, 0]} center>
+                <div
+                  onMouseEnter={() => handlePointerOver(f.id)}
+                  onMouseLeave={handlePointerOut}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    useOceanStore.getState().selectArgo(isSelected ? null : f.id);
+                  }}
+                  style={{
+                    color: isHighlighted ? '#ffaa00' : '#88ddff',
+                    fontSize: 9,
+                    fontWeight: isHighlighted ? 'bold' : 'normal',
+                    fontFamily: 'monospace',
+                    background: isHighlighted ? 'rgba(25, 20, 5, 0.9)' : 'rgba(0,0,0,0.7)',
+                    padding: '2px 6px',
+                    borderRadius: 4,
+                    border: isHighlighted ? '1px solid #ffaa00' : '1px solid rgba(0, 200, 255, 0.2)',
+                    pointerEvents: 'auto',
+                    cursor: 'pointer',
+                    boxShadow: isHighlighted ? '0 0 10px rgba(255, 170, 0, 0.5)' : 'none',
+                    userSelect: 'none',
+                    whiteSpace: 'nowrap',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
                   {f.id}
                 </div>
               </Html>
@@ -264,7 +332,12 @@ const SceneContent = () => {
 export const EarthScene = () => {
   return (
     <div style={{ width: '100%', height: '100%', background: '#05080f', position: 'relative' }}>
-      <Canvas camera={{ position: [3, 1.5, 5], fov: 40 }}>
+      <Canvas
+        camera={{ position: [3, 1.5, 5], fov: 40 }}
+        onPointerMissed={() => {
+          useOceanStore.getState().selectArgo(null);
+        }}
+      >
         <SceneContent />
       </Canvas>
     </div>

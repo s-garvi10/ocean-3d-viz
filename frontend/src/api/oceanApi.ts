@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE = 'http://localhost:8000/api/v1';
+const API_BASE = (import.meta as ImportMeta & { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL || 'http://localhost:8000/api/v1';
 
 const api = axios.create({
   baseURL: API_BASE,
@@ -52,7 +52,7 @@ export const fetchSlice = async (params: {
     }
     const lats = Array.from({ length: rows }, (_, i) => -10 + (i / (rows - 1)) * 40);
     const lons = Array.from({ length: cols }, (_, i) => 50 + (i / (cols - 1)) * 50);
-    return { data, lats, lons, min: 15, max: 32 };
+    return { data, lats, lons, min: 15, max: 32, source: 'demo' as const };
   }
 };
 
@@ -98,7 +98,7 @@ export const fetchComparison = async (floatId: string, variable: string, time: s
         correlation: null,
         mae: null,
         matchedPoints: 0,
-        error: 'Comparison failed—check API connection.',
+        error: 'Comparison failed - check API connection.',
       };
     }
     const rmse = (0.8 + Math.random() * 0.8).toFixed(2);

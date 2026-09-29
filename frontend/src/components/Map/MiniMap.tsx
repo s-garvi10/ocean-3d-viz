@@ -25,35 +25,11 @@ export const MiniMap = () => {
   }, []);
 
   return (
-    <div style={{
-      position: 'absolute',
-      bottom: 80,
-      right: 20,
-      zIndex: 10,
-      width: 200,
-      height: 150,
-      borderRadius: 12,
-      overflow: 'hidden',
-      border: '1px solid rgba(0,200,255,0.12)',
-      boxShadow: '0 8px 32px rgba(0,0,0,0.6)'
-    }}>
-      <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />
-      <div style={{
-        position: 'absolute',
-        bottom: 4,
-        left: 8,
-        right: 8,
-        background: 'rgba(0,0,0,0.7)',
-        padding: '2px 8px',
-        borderRadius: 4,
-        fontSize: 9,
-        color: '#8899bb',
-        display: 'flex',
-        justifyContent: 'space-between',
-        fontFamily: 'monospace'
-      }}>
-        <span>{variable.toUpperCase()} {depth}m</span>
-        <span>{time}</span>
+    <div className="mini-map-card">
+      <div ref={mapContainer} className="mini-map-canvas" />
+      <div className="mini-map-caption">
+        <span><strong>REGION</strong>{region}</span>
+        <span><strong>{variable.toUpperCase()} · {depth}m</strong>{time}</span>
       </div>
     </div>
   );

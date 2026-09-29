@@ -1,20 +1,36 @@
 import React from 'react';
+import {
+  Activity,
+  BarChart3,
+  BrainCircuit,
+  CheckCircle2,
+  CircleHelp,
+  Database,
+  FileChartColumn,
+  Globe2,
+  Layers3,
+  Settings2,
+  Waves,
+  Wind,
+} from 'lucide-react';
 import { useOceanStore } from '../../store/oceanStore';
 
 const menuItems = [
-  { id: 'outreach', label: 'Outreach & Guide', icon: '📖', action: 'outreach' },
-  { id: 'live', label: 'Live Ocean', icon: '🌊', action: 'reset' },
-  { id: '3dglobe', label: '3D Globe', icon: '🌍', action: 'globe' },
-  { id: 'depthcurtain', label: 'Depth Curtain', icon: '📊', action: 'curtain' },
-  { id: 'profile', label: 'Temperature Profile', icon: '🌡️', action: 'profile' },
-  { id: 'currents', label: 'Currents', icon: '🌪️', action: 'currents' },
-  { id: 'argo', label: 'ARGO Floats', icon: '🤿', action: 'argo' },
-  { id: 'ai', label: 'AI Reconstruction', icon: '🧠', action: 'ai' },
-  { id: 'validation', label: 'Validation', icon: '✅', action: 'validation' },
-  { id: 'sources', label: 'Data Sources', icon: '📂', action: 'sources' },
-  { id: 'analytics', label: 'Analytics', icon: '📈', action: 'analytics' },
-  { id: 'settings', label: 'Settings', icon: '⚙️', action: 'settings' },
+  { id: 'live', label: 'Live Ocean', icon: Waves, action: 'reset', group: 'Explore' },
+  { id: '3dglobe', label: '3D Globe', icon: Globe2, action: 'globe', group: 'Explore' },
+  { id: 'depthcurtain', label: 'Depth Curtain', icon: Layers3, action: 'curtain', group: 'Explore' },
+  { id: 'profile', label: 'Temperature Profile', icon: Activity, action: 'profile', group: 'Explore' },
+  { id: 'currents', label: 'Currents', icon: Wind, action: 'currents', group: 'Explore' },
+  { id: 'argo', label: 'ARGO Floats', icon: Activity, action: 'argo', group: 'Observe' },
+  { id: 'validation', label: 'Validation', icon: CheckCircle2, action: 'validation', group: 'Observe' },
+  { id: 'ai', label: 'AI Reconstruction', icon: BrainCircuit, action: 'ai', group: 'Analyze' },
+  { id: 'analytics', label: 'Analytics', icon: BarChart3, action: 'analytics', group: 'Analyze' },
+  { id: 'sources', label: 'Data Sources', icon: Database, action: 'sources', group: 'Analyze' },
+  { id: 'settings', label: 'Settings', icon: Settings2, action: 'settings', group: 'System' },
+  { id: 'outreach', label: 'Guide', icon: CircleHelp, action: 'outreach', group: 'System' },
 ];
+
+const navGroups = ['Explore', 'Observe', 'Analyze', 'System'];
 
 export const Sidebar = () => {
   const {
@@ -56,11 +72,11 @@ export const Sidebar = () => {
         break;
       case 'currents':
         setDisplayMode('currents');
-        toggleLayer('showCurrents');
+        if (!showCurrents) toggleLayer('showCurrents');
         break;
       case 'argo':
         setDisplayMode('argo');
-        toggleLayer('showArgo');
+        if (!showArgo) toggleLayer('showArgo');
         break;
       case 'ai':
         setDisplayMode('ai');
@@ -103,80 +119,78 @@ export const Sidebar = () => {
   };
 
   return (
-    <div
+    <aside
+      className="sidebar"
       style={{
         gridArea: 'sidebar',
-        background: 'rgba(8, 12, 25, 0.95)',
+        background: 'var(--bg-panel)',
         backdropFilter: 'blur(10px)',
-        borderRight: '1px solid rgba(0, 200, 255, 0.08)',
-        padding: '20px 0',
-        display: 'flex',
+        borderRight: '1px solid var(--border-subtle)',
+        padding: '24px 0 16px',
         flexDirection: 'column',
         height: '100vh',
         overflowY: 'auto',
       }}
     >
-      <div style={{ padding: '0 20px', marginBottom: 24 }}>
-        <span style={{ color: 'white', fontSize: 20, fontWeight: 'bold', letterSpacing: 1 }}>
+      <div style={{ padding: '0 18px', marginBottom: 24 }}>
+        <span style={{ color: 'var(--text-primary)', fontSize: 20, fontWeight: 700, letterSpacing: 0.5 }}>
           OCEAN-X
         </span>
-        <div style={{ color: '#445566', fontSize: 10, textTransform: 'uppercase', letterSpacing: 1 }}>
-          Subsurface Intelligence - Ocean Insight
+        <div style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 3 }}>
+          Ocean Intelligence
+        </div>
+        <div style={{ color: 'var(--success)', fontSize: 9, marginTop: 12, letterSpacing: 0.7 }}>
+          <span style={{ marginRight: 6 }}>●</span>SYSTEM ONLINE
         </div>
       </div>
 
       <div style={{ flex: 1 }}>
-        {menuItems.map((item) => (
-          <div
-            key={item.id}
-            onClick={() => handleMenuClick(item)}
-            style={{
-              padding: '10px 20px',
-              margin: '2px 8px',
-              borderRadius: 8,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              background: isActive(item) ? 'rgba(0, 170, 255, 0.12)' : 'transparent',
-              borderLeft: isActive(item) ? '3px solid #00aaff' : '3px solid transparent',
-              color: isActive(item) ? '#ffffff' : '#8899bb',
-              fontSize: 13,
-              fontFamily: 'monospace',
-              transition: 'all 0.2s',
-            }}
-          >
-            <span style={{ fontSize: 16 }}>{item.icon}</span>
-            {item.label}
-            {item.action === 'argo' && (
-              <span
-                style={{
-                  marginLeft: 'auto',
-                  width: 8,
-                  height: 8,
-                  borderRadius: '50%',
-                  background: showArgo ? '#00ff88' : '#445566',
-                }}
-              />
-            )}
-            {item.action === 'currents' && (
-              <span
-                style={{
-                  marginLeft: 'auto',
-                  width: 8,
-                  height: 8,
-                  borderRadius: '50%',
-                  background: showCurrents ? '#44ccff' : '#445566',
-                }}
-              />
-            )}
+        {navGroups.map((group) => (
+          <div key={group} style={{ marginBottom: 18 }}>
+            <div style={{ padding: '0 18px 7px', color: 'var(--text-muted)', fontSize: 9, letterSpacing: 1.2, textTransform: 'uppercase' }}>
+              {group}
+            </div>
+            {menuItems.filter((item) => item.group === group).map((item) => {
+              const Icon = item.icon;
+              const active = isActive(item);
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => handleMenuClick(item)}
+                  aria-current={active ? 'page' : undefined}
+                  style={{
+                    width: 'calc(100% - 16px)',
+                    padding: '9px 12px',
+                    margin: '2px 8px',
+                    borderRadius: 8,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 11,
+                    background: active ? 'rgba(56, 200, 232, 0.12)' : 'transparent',
+                    border: '1px solid transparent',
+                    borderLeft: active ? '2px solid var(--accent-cyan)' : '2px solid transparent',
+                    color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
+                    fontSize: 13,
+                    textAlign: 'left',
+                    transition: 'all var(--transition-fast) ease',
+                  }}
+                >
+                  <Icon size={16} strokeWidth={1.8} aria-hidden="true" />
+                  <span>{item.label}</span>
+                  {item.action === 'argo' && <span aria-label={showArgo ? 'ARGO layer on' : 'ARGO layer off'} style={{ marginLeft: 'auto', color: showArgo ? 'var(--success)' : 'var(--text-muted)', fontSize: 10 }}>●</span>}
+                  {item.action === 'currents' && <span aria-label={showCurrents ? 'Currents layer on' : 'Currents layer off'} style={{ marginLeft: 'auto', color: showCurrents ? 'var(--accent-cyan)' : 'var(--text-muted)', fontSize: 10 }}>●</span>}
+                </button>
+              );
+            })}
           </div>
         ))}
       </div>
 
-      <div style={{ borderTop: '1px solid rgba(0,200,255,0.08)', padding: '16px 20px' }}>
-        <div style={{ color: '#88ccff', fontSize: 10, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 }}>
-          API Pipeline Status
+      <div style={{ borderTop: '1px solid var(--border-subtle)', padding: '16px 18px' }}>
+        <div style={{ color: 'var(--text-secondary)', fontSize: 10, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 }}>
+          Data Pipeline
         </div>
         {pipeline.map((step, idx) => (
           <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
@@ -184,16 +198,16 @@ export const Sidebar = () => {
               style={{
                 color:
                   step.status === 'completed'
-                    ? '#00ff88'
+                    ? 'var(--success)'
                     : step.status === 'inprogress'
-                    ? '#ffaa44'
-                    : '#445566',
+                    ? 'var(--accent-cyan)'
+                    : 'var(--text-muted)',
                 fontSize: 12,
               }}
             >
               {step.status === 'completed' ? '✓' : step.status === 'inprogress' ? '⏳' : '○'}
             </span>
-            <span style={{ color: step.status === 'pending' ? '#445566' : '#8899bb', fontSize: 11 }}>
+            <span style={{ color: step.status === 'pending' ? 'var(--text-muted)' : 'var(--text-secondary)', fontSize: 11 }}>
               {step.label}
             </span>
             {step.progress && (
@@ -202,7 +216,7 @@ export const Sidebar = () => {
                   {step.progress}%
                 </span>
                 <div style={{ width: 40, height: 4, background: '#1a2a3a', borderRadius: 2, overflow: 'hidden' }}>
-                  <div style={{ width: `${step.progress}%`, height: '100%', background: '#00aaff' }} />
+                  <div style={{ width: `${step.progress}%`, height: '100%', background: 'var(--accent-cyan)' }} />
                 </div>
               </>
             )}
@@ -210,13 +224,11 @@ export const Sidebar = () => {
         ))}
       </div>
 
-      <div style={{ borderTop: '1px solid rgba(0,200,255,0.08)', padding: '12px 20px' }}>
-        <div style={{ color: '#445566', fontSize: 10, textAlign: 'center' }}>
+      <div style={{ borderTop: '1px solid var(--border-subtle)', padding: '12px 18px' }}>
+        <div style={{ color: 'var(--text-muted)', fontSize: 10, textAlign: 'center' }}>
           OceanEmbed v1.0
-          <br />
-          INCOIS · SIH 2026
         </div>
       </div>
-    </div>
+    </aside>
   );
 };

@@ -1,136 +1,131 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Activity, MapPin, Pin, Thermometer, X } from 'lucide-react';
 import { useOceanStore } from '../../store/oceanStore';
 import { fetchArgoProfile, fetchComparison, fetchThermocline } from '../../api/oceanApi';
 import ProfileChart from './ProfileChart';
 
 export const ValidationPanel = () => {
   const {
-    selectedArgoId, argoFloats, comparison, thermocline, selectedProfile,
-    setComparison, setThermocline, setProfile, variable, time
+    selectedArgoId, hoveredArgoId, isHoveringPanel, argoFloats, comparison,
+    thermocline, selectedProfile, setComparison, setThermocline, setProfile,
+    selectArgo, setHoveredArgo, setIsHoveringPanel, variable, time,
   } = useOceanStore();
+  const activeArgoId = hoveredArgoId || selectedArgoId;
+  const [pinnedFloatId, setPinnedFloatId] = useState<string | null>(null);
+  const cacheRef = useRef<Record<string, { profile: any; comparison: any; thermocline: any }>>({});
 
   useEffect(() => {
-    if (!selectedArgoId) {
+    if (activeArgoId) setPinnedFloatId(activeArgoId);
+  }, [activeArgoId]);
+
+  const displayFloatId = activeArgoId || (isHoveringPanel ? pinnedFloatId : null);
+
+  useEffect(() => {
+    if (!displayFloatId) {
       setComparison(null);
       setThermocline(null);
       setProfile(null);
       return;
     }
 
-    const loadData = async () => {
-      try {
-        const profile = await fetchArgoProfile(selectedArgoId);
-        setProfile(profile);
-        const comp = await fetchComparison(selectedArgoId, variable, time);
-        setComparison(comp);
-        const tc = await fetchThermocline(selectedArgoId, variable, time);
-        setThermocline(tc);
-      } catch (e) {
-        setComparison({ rmse: null, bias: null, correlation: null, mae: null, matchedPoints: 0, error: 'Comparison failed' });
-      }
-    };
-    loadData();
-  }, [selectedArgoId, variable, time]);
+    const cacheKey = `${displayFloatId}_${variable}_${time}`;
+    const cached = cacheRef.current[cacheKey];
+    if (cached) {
+      setProfile(cached.profile);
+      setComparison(cached.comparison);
+      setThermocline(cached.thermocline);
+      return;
+    }
 
-  const float = argoFloats.find((f: any) => f.id === selectedArgoId);
-  const isError = comparison?.error;
+    let isCurrent = true;
+    Promise.all([
+      fetchArgoProfile(displayFloatId),
+      fetchComparison(displayFloatId, variable, time),
+      fetchThermocline(displayFloatId, variable, time),
+    ]).then(([profile, comp, tc]) => {
+      if (!isCurrent) return;
+      cacheRef.current[cacheKey] = { profile, comparison: comp, thermocline: tc };
+      setProfile(profile);
+      setComparison(comp);
+      setThermocline(tc);
+    }).catch(() => {
+      if (isCurrent) setComparison({ rmse: null, bias: null, correlation: null, mae: null, matchedPoints: 0, error: 'Comparison failed' });
+    });
 
-  if (!selectedArgoId) {
-    return (
-      <div style={{
-        gridArea: 'rightpanel',
-        background: 'rgba(8, 12, 25, 0.95)',
-        backdropFilter: 'blur(10px)',
-        borderLeft: '1px solid rgba(0, 200, 255, 0.08)',
-        padding: '20px',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: '#445566',
-        fontFamily: 'monospace'
-      }}>
-        <div style={{ fontSize: 40, opacity: 0.3 }}>??</div>
-        <div style={{ marginTop: 12, fontSize: 12 }}>SELECT AN ARGO FLOAT</div>
-        <div style={{ fontSize: 10, color: '#334466', marginTop: 4 }}>Click any Argo marker on the globe</div>
-      </div>
-    );
-  }
+    return () => { isCurrent = false; };
+  }, [displayFloatId, variable, time, setComparison, setProfile, setThermocline]);
+
+  if (!displayFloatId) return <div className="validation-panel-empty" />;
+
+  const float = argoFloats.find((item: any) => item.id === displayFloatId);
+  const isPinned = selectedArgoId === displayFloatId;
+  const closePanel = () => {
+    selectArgo(null);
+    setHoveredArgo(null);
+    setIsHoveringPanel(false);
+  };
 
   return (
-    <div style={{
-      gridArea: 'rightpanel',
-      background: 'rgba(8, 12, 25, 0.95)',
-      backdropFilter: 'blur(10px)',
-      borderLeft: '1px solid rgba(0, 200, 255, 0.08)',
-      padding: '16px',
-      overflowY: 'auto',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 12
-    }}>
-      {/* Location Info */}
-      <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: 8, padding: 12, borderLeft: '2px solid #00aaff' }}>
-        <div style={{ color: '#88ccff', fontSize: 10, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>
-          TEMPERATURE AT LOCATION
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, fontSize: 12 }}>
-          <span style={{ color: '#8899bb' }}>Lat</span><span style={{ color: 'white' }}>{float?.lat}° N</span>
-          <span style={{ color: '#8899bb' }}>Lon</span><span style={{ color: 'white' }}>{float?.lon}° E</span>
-          <span style={{ color: '#8899bb' }}>Date</span><span style={{ color: 'white', fontSize: 11 }}>{time}</span>
-        </div>
-      </div>
-
-      {/* Profile Chart */}
-      {selectedProfile && <ProfileChart profile={selectedProfile} variable={variable} />}
-
-      {/* Validation Metrics */}
-      <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: 8, padding: 12 }}>
-        <div style={{ color: '#88ccff', fontSize: 10, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>
-          VALIDATION METRICS (vs ARGO)
-        </div>
-        {isError ? (
-          <div style={{ color: '#ff6644', fontSize: 12 }}>?? {comparison?.error}</div>
-        ) : comparison ? (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
-            <div>
-              <span style={{ color: '#8899bb', fontSize: 9 }}>RMSE</span>
-              <div style={{ color: '#00ffaa', fontSize: 18, fontWeight: 'bold' }}>{comparison.rmse?.toFixed(2)} °C</div>
-            </div>
-            <div>
-              <span style={{ color: '#8899bb', fontSize: 9 }}>Correlation</span>
-              <div style={{ color: '#44ccff', fontSize: 18, fontWeight: 'bold' }}>{comparison.correlation?.toFixed(2)}</div>
-            </div>
-            <div>
-              <span style={{ color: '#8899bb', fontSize: 9 }}>MAE</span>
-              <div style={{ color: '#ffaa44', fontSize: 16 }}>{comparison.mae?.toFixed(2)} °C</div>
-            </div>
-            <div>
-              <span style={{ color: '#8899bb', fontSize: 9 }}>Bias</span>
-              <div style={{ color: '#ff6644', fontSize: 16 }}>{comparison.bias?.toFixed(2)} °C</div>
-            </div>
-          </div>
-        ) : (
-          <div style={{ color: '#445566', fontSize: 12 }}>Calculating...</div>
-        )}
-      </div>
-
-      {/* Thermocline */}
-      {thermocline && (
-        <div style={{ background: 'rgba(255,100,50,0.08)', border: '1px solid rgba(255,100,50,0.3)', borderRadius: 8, padding: 10 }}>
-          <span style={{ color: '#ffaa44', fontSize: 10, textTransform: 'uppercase', letterSpacing: 1 }}>??? Thermocline</span>
-          <div style={{ display: 'flex', gap: 20, marginTop: 4 }}>
-            <div>
-              <span style={{ color: '#8899bb', fontSize: 10 }}>Depth</span>
-              <div style={{ color: 'white', fontWeight: 'bold', fontSize: 14 }}>{thermocline.depth}m</div>
-            </div>
-            <div>
-              <span style={{ color: '#8899bb', fontSize: 10 }}>Gradient</span>
-              <div style={{ color: '#ff6644', fontSize: 14 }}>{thermocline.gradient.toFixed(2)} °C/m</div>
-            </div>
+    <aside
+      className="validation-panel"
+      onMouseEnter={() => setIsHoveringPanel(true)}
+      onMouseLeave={() => { setIsHoveringPanel(false); setHoveredArgo(null); }}
+      aria-label={`ARGO ${displayFloatId} inspector`}
+    >
+      <header className="inspector-header">
+        <div>
+          <span className="eyebrow"><Activity size={13} /> ARGO FLOAT</span>
+          <div className="inspector-title-row">
+            <h2>{displayFloatId}</h2>
+            <span className={`pin-status${isPinned ? ' pinned' : ''}`}>{isPinned ? 'PINNED' : 'PREVIEW'}</span>
           </div>
         </div>
+        <button type="button" className="icon-button" onClick={closePanel} aria-label="Close ARGO inspector" title="Close inspector"><X size={16} /></button>
+      </header>
+
+      <section className="inspector-section location-section">
+        <div className="section-heading"><MapPin size={14} /><span>LOCATION</span></div>
+        <div className="location-grid">
+          <span>Latitude</span><strong>{float ? `${float.lat.toFixed(3)}Â° N` : 'â€”'}</strong>
+          <span>Longitude</span><strong>{float ? `${float.lon.toFixed(3)}Â° E` : 'â€”'}</strong>
+          <span>Timestamp</span><strong>{time}</strong>
+        </div>
+      </section>
+
+      {selectedProfile && (
+        <section className="inspector-section profile-section">
+          <div className="section-heading"><Thermometer size={14} /><span>PROFILE</span></div>
+          <ProfileChart profile={selectedProfile} variable={variable} />
+        </section>
       )}
-    </div>
+
+      <section className="inspector-section">
+        <div className="section-heading"><span>MODEL VALIDATION</span><span className="section-meta">VS ARGO</span></div>
+        {comparison?.error ? (
+          <div className="validation-error">{comparison.error}</div>
+        ) : comparison ? (
+          <div className="metric-grid">
+            <Metric label="RMSE" value={comparison.rmse !== null ? `${comparison.rmse.toFixed(2)} Â°C` : 'N/A'} tone="success" />
+            <Metric label="MAE" value={comparison.mae !== null ? `${comparison.mae.toFixed(2)} Â°C` : 'N/A'} tone="cyan" />
+            <Metric label="BIAS" value={comparison.bias !== null ? `${comparison.bias.toFixed(2)} Â°C` : 'N/A'} tone="warning" />
+            <Metric label="CORRELATION" value={comparison.correlation !== null ? comparison.correlation.toFixed(2) : 'N/A'} tone="blue" />
+          </div>
+        ) : <div className="panel-placeholder">Calculating validation metrics...</div>}
+      </section>
+
+      {thermocline && (
+        <section className="thermocline-card">
+          <div className="section-heading"><Thermometer size={14} /><span>THERMOCLINE</span></div>
+          <div className="thermocline-values">
+            <div><span>DEPTH</span><strong>{thermocline.depth}m</strong></div>
+            <div><span>GRADIENT</span><strong>{thermocline.gradient.toFixed(2)} Â°C/m</strong></div>
+          </div>
+        </section>
+      )}
+    </aside>
   );
 };
+
+const Metric = ({ label, value, tone }: { label: string; value: string; tone: string }) => (
+  <div className={`metric-card ${tone}`}><span>{label}</span><strong>{value}</strong></div>
+);

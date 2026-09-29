@@ -41,6 +41,8 @@ export interface OceanState {
   // --- Argo System ---
   argoFloats: any[];
   selectedArgoId: string | null;
+  hoveredArgoId: string | null;
+  isHoveringPanel: boolean;
   selectedProfile: any | null;
   comparison: ComparisonResult | null;
   thermocline: { depth: number; gradient: number } | null;
@@ -48,6 +50,7 @@ export interface OceanState {
   // --- Status ---
   isLoading: boolean;
   error: string | null;
+  dataSource: 'live' | 'demo';
   lastUpdated: string;
 
   // --- Actions ---
@@ -59,16 +62,20 @@ export interface OceanState {
   setPalette: (p: any) => void;
   setColorRange: (min: number, max: number) => void;
   setExaggeration: (e: number) => void;
+  setOpacity: (opacity: number) => void;
   togglePlay: () => void;
   toggleLayer: (layer: string) => void;
   setGridData: (data: number[][], lats: number[], lons: number[]) => void;
   setArgoFloats: (floats: any[]) => void;
   selectArgo: (id: string | null) => void;
+  setHoveredArgo: (id: string | null) => void;
+  setIsHoveringPanel: (isHovering: boolean) => void;
   setProfile: (profile: any) => void;
   setComparison: (comp: ComparisonResult | null) => void;
   setThermocline: (tc: any) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
+  setDataSource: (source: 'live' | 'demo') => void;
   setTimesteps: (times: string[]) => void;
   setDepths: (depths: number[]) => void;
 }
@@ -99,11 +106,14 @@ export const useOceanStore = create<OceanState>((set) => ({
   depths: [0, 10, 25, 50, 100, 200, 500, 1000],
   argoFloats: [],
   selectedArgoId: null,
+  hoveredArgoId: null,
+  isHoveringPanel: false,
   selectedProfile: null,
   comparison: null,
   thermocline: null,
   isLoading: false,
   error: null,
+  dataSource: 'live',
   lastUpdated: new Date().toISOString(),
 
   // --- Actions ---
@@ -115,6 +125,7 @@ export const useOceanStore = create<OceanState>((set) => ({
   setPalette: (palette) => set({ palette }),
   setColorRange: (colorMin, colorMax) => set({ colorMin, colorMax }),
   setExaggeration: (exaggeration) => set({ exaggeration }),
+  setOpacity: (opacity) => set({ opacity }),
   togglePlay: () => set((state) => ({ isPlaying: !state.isPlaying })),
   toggleLayer: (layer) => {
     const map: Record<string, keyof OceanState> = {
@@ -131,11 +142,14 @@ export const useOceanStore = create<OceanState>((set) => ({
   setGridData: (gridData, lats, lons) => set({ gridData, lats, lons }),
   setArgoFloats: (argoFloats) => set({ argoFloats }),
   selectArgo: (selectedArgoId) => set({ selectedArgoId, comparison: null, thermocline: null }),
+  setHoveredArgo: (hoveredArgoId) => set({ hoveredArgoId }),
+  setIsHoveringPanel: (isHoveringPanel) => set({ isHoveringPanel }),
   setProfile: (selectedProfile) => set({ selectedProfile }),
   setComparison: (comparison) => set({ comparison }),
   setThermocline: (thermocline) => set({ thermocline }),
   setLoading: (isLoading) => set({ isLoading }),
   setError: (error) => set({ error }),
+  setDataSource: (dataSource) => set({ dataSource }),
   setTimesteps: (timesteps) => set({ timesteps }),
   setDepths: (depths) => set({ depths }),
 }));
